@@ -1,0 +1,232 @@
+/* Global Styles for Cycling Hub App */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Smooth transitions for better UX */
+.MuiCard-root {
+  transition: all 0.2s ease-in-out;
+}
+
+.MuiButton-root {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  
+  .MuiCard-root {
+    margin-bottom: 8px;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.75rem;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 601px) and (max-width: 960px) {
+  .MuiContainer-root {
+    max-width: 600px;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 961px) {
+  .MuiContainer-root {
+    max-width: 600px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    min-height: 100vh;
+  }
+}
+
+/* Custom gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.cycling-gradient {
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+}
+
+/* Loading states */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Custom button styles */
+.cycling-button {
+  background: linear-gradient(45deg, #1976d2 30%, #42a5f5 90%);
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  height: 48px;
+  padding: 0 30px;
+  box-shadow: 0 3px 5px 2px rgba(25, 118, 210, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.cycling-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 8px 2px rgba(25, 118, 210, 0.4);
+}
+
+/* Card hover effects */
+.cycling-card {
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+.cycling-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Bottom navigation custom styles */
+.MuiBottomNavigation-root {
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.MuiBottomNavigationAction-root {
+  transition: all 0.2s ease-in-out;
+}
+
+.MuiBottomNavigationAction-root.Mui-selected {
+  color: #1976d2;
+}
+
+/* Stepper custom styles */
+.MuiStepper-root {
+  background-color: transparent;
+}
+
+.MuiStepLabel-root {
+  font-size: 0.875rem;
+}
+
+/* Alert custom styles */
+.MuiAlert-root {
+  border-radius: 8px;
+}
+
+/* Chip custom styles */
+.MuiChip-root {
+  border-radius: 16px;
+}
+
+/* TextField custom styles */
+.MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 8px;
+}
+
+/* Slider custom styles */
+.MuiSlider-root {
+  color: #1976d2;
+}
+
+.MuiSlider-thumb {
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.3);
+}
+
+.MuiSlider-track {
+  height: 4px;
+}
+
+.MuiSlider-rail {
+  height: 4px;
+}
+
+/* Accessibility improvements */
+.MuiButton-root:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.MuiCard-root:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .MuiBottomNavigation-root,
+  .MuiAppBar-root {
+    display: none !important;
+  }
+  
+  .MuiContainer-root {
+    box-shadow: none !important;
+    max-width: none !important;
+  }
+}
+

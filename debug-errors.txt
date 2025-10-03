@@ -1,0 +1,32 @@
+DEBUG ERRORS AND FIXES LOG
+=====================================
+
+ERROR 1: Mapbox API 422 Error
+- Issue: Request failed with status code 422
+- Location: RouteService.js:558 generateIsochrone
+- Cause: URL format was incorrect - coordinates were URL-encoded (%2C) instead of plain comma
+- Fix: Changed from ${startLocation.lng}%2C${startLocation.lat} to ${startLocation.lng},${startLocation.lat}
+- Context: User trying to generate isochrone map after geocoding address
+- Status: FIXED
+
+ERROR 2: CORS Error with Height API
+- Issue: 403 error from cors-anywhere.herokuapp.com proxy
+- Location: RouteService.js generateHeightRoutes
+- Cause: cors-anywhere.herokuapp.com proxy is blocked or requires setup
+- Fix: Switched to thingproxy.freeboard.io proxy that supports headers
+- Context: User trying to generate Height routes after isochrone
+- Status: FIXED
+
+ERROR 3: Generate Route Button Not Working
+- Issue: Button click not triggering route generation
+- Location: CreateRideScreen.js handleGenerateRoute
+- Cause: Height API call was not automatic after isochrone generation
+- Fix: Added automatic Height API call after isochrone map generation
+- Context: User wants both API calls to happen automatically when Generate Route is clicked
+- Status: FIXED
+
+CURRENT ISSUE: Mapbox 422 Error
+- Need to check: contours_meters parameter format
+- Need to check: API key validity
+- Need to check: coordinates format
+- Need to check: range values
