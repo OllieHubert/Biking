@@ -226,15 +226,6 @@ const HomeScreen = ({ onNavigate }) => {
         </Grid>
       </Box>
 
-      {/* UCI Badge */}
-      <Box sx={{ textAlign: 'center', mt: 3 }}>
-        <Chip
-          label="UCI Official Partner"
-          color="primary"
-          variant="outlined"
-          sx={{ fontWeight: 'bold' }}
-        />
-      </Box>
     </Box>
   );
 };
