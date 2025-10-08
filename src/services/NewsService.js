@@ -45,19 +45,24 @@ class NewsService {
   async fetchFromNewsAPI() {
     try {
       // Use multiple search queries to get comprehensive cycling news
+      // Prioritized for newer articles and major UCI events, especially European races
       const searchQueries = [
-        'cycling',
-        'bike racing',
-        'UCI',
-        'Tour de France',
-        'mountain biking',
-        'bicycle',
-        'velodrome',
-        'cycling championship',
-        'bike technology',
-        'cycling news',
-        'bike industry',
-        'cycling equipment'
+        'UCI World Championships 2024',
+        'European cycling championships',
+        'Tour de France 2024',
+        'Giro d\'Italia 2024',
+        'Vuelta a España 2024',
+        'Paris-Roubaix 2024',
+        'Milan-San Remo 2024',
+        'Liège-Bastogne-Liège 2024',
+        'Israel cycling team name change',
+        'cycling news Europe',
+        'UCI cycling news',
+        'professional cycling 2024',
+        'cycling championship results',
+        'bike racing news',
+        'cycling technology 2024',
+        'mountain biking championship'
       ];
       
       const allArticles = [];
@@ -67,7 +72,9 @@ class NewsService {
         try {
           // Use CORS proxy for NewsAPI
           const proxyUrl = 'https://api.allorigins.win/raw?url=';
-          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&pageSize=8&language=en&from=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&apiKey=${this.apiKey}`;
+          // Prioritize very recent articles (last 3 days) for major events
+          const fromDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&pageSize=10&language=en&from=${fromDate}&apiKey=${this.apiKey}`;
           const response = await fetch(proxyUrl + encodeURIComponent(newsApiUrl));
           
           if (!response.ok) {
@@ -114,7 +121,7 @@ class NewsService {
   async fetchFromGuardianAPI() {
     try {
       const response = await fetch(
-        'https://content.guardianapis.com/search?q=cycling OR "bike racing" OR "UCI"&show-fields=thumbnail,trailText&page-size=10&api-key=test'
+        'https://content.guardianapis.com/search?q=cycling OR "bike racing" OR "UCI" OR "Tour de France" OR "cycling championship" OR "European cycling" OR "Israel cycling"&show-fields=thumbnail,trailText&page-size=10&from-date=2024-01-01&api-key=test'
       );
       const data = await response.json();
       
@@ -221,7 +228,12 @@ class NewsService {
       'cycling team', 'cycling event', 'cycling news',
       'bike safety', 'cycling safety', 'bike helmet',
       'cycling technology', 'bike technology', 'cycling gear',
-      'cycling training', 'bike training', 'cycling fitness'
+      'cycling training', 'bike training', 'cycling fitness',
+      // Enhanced keywords for major events and recent developments
+      'world championships', 'european championship', 'championship',
+      'paris-roubaix', 'milan-san remo', 'liège-bastogne-liège',
+      'israel', 'team name change', 'professional cycling',
+      'grand tour', 'classic', 'monument', 'spring classic'
     ];
     
     return cyclingKeywords.some(keyword => text.includes(keyword));
@@ -274,91 +286,131 @@ class NewsService {
     return hoursDiff < 24; // Trending if published within last 24 hours
   }
 
-  // Calculate popularity score
+  // Calculate popularity score - REWEIGHTED for newer articles and major UCI events
   calculatePopularity(article) {
-    let score = 30; // Lower base score to give more weight to recency
+    let score = 20; // Lower base score to give more weight to recency and major events
     
-    // Major boost for very recent articles (within 24 hours)
+    // MAJOR boost for very recent articles (within 24 hours)
     const publishedAt = new Date(article.publishedAt || article.webPublicationDate);
     const now = new Date();
     const hoursDiff = (now - publishedAt) / (1000 * 60 * 60);
     
-    if (hoursDiff < 6) {
-      score += 40; // Very recent (within 6 hours)
+    if (hoursDiff < 2) {
+      score += 50; // Very recent (within 2 hours) - MASSIVE boost
+    } else if (hoursDiff < 6) {
+      score += 45; // Very recent (within 6 hours)
     } else if (hoursDiff < 24) {
-      score += 30; // Recent (within 24 hours)
+      score += 35; // Recent (within 24 hours)
     } else if (hoursDiff < 72) {
-      score += 20; // Fairly recent (within 3 days)
+      score += 25; // Fairly recent (within 3 days)
     } else if (hoursDiff < 168) {
-      score += 10; // This week
+      score += 15; // This week
     }
     
     // Boost for trending content (recent articles)
     if (this.isTrending(article.publishedAt || article.webPublicationDate)) {
-      score += 15;
-    }
-    
-    // Boost for UCI/Championship content
-    const text = `${article.title || article.webTitle} ${article.description || article.fields?.trailText || ''}`.toLowerCase();
-    if (text.includes('uci') || text.includes('championship') || text.includes('world cup')) {
       score += 20;
     }
     
-    // Boost for major cycling events
+    const text = `${article.title || article.webTitle} ${article.description || article.fields?.trailText || ''}`.toLowerCase();
+    
+    // MASSIVE boost for UCI World Championships and major events
+    if (text.includes('uci world championships') || text.includes('world championships 2024')) {
+      score += 35;
+    } else if (text.includes('uci') || text.includes('championship') || text.includes('world cup')) {
+      score += 25;
+    }
+    
+    // MAJOR boost for European cycling events
+    if (text.includes('european championship') || text.includes('european cycling')) {
+      score += 30;
+    }
+    
+    // MAJOR boost for Grand Tours and Classics
     if (text.includes('tour de france') || text.includes('giro') || text.includes('vuelta')) {
+      score += 25;
+    }
+    
+    // MAJOR boost for Spring Classics and Monuments
+    if (text.includes('paris-roubaix') || text.includes('milan-san remo') || 
+        text.includes('liège-bastogne-liège') || text.includes('flanders')) {
+      score += 28;
+    }
+    
+    // MAJOR boost for Israel team name change (recent development)
+    if (text.includes('israel') && (text.includes('team') || text.includes('name change'))) {
+      score += 30;
+    }
+    
+    // Boost for professional cycling content
+    if (text.includes('professional cycling') || text.includes('pro cycling')) {
+      score += 20;
+    }
+    
+    // Boost for major cycling events and results
+    if (text.includes('cycling results') || text.includes('race results') || 
+        text.includes('cycling news') || text.includes('cycling event')) {
       score += 18;
     }
     
-    // Boost for technology content
+    // Boost for technology content (reduced priority)
     if (text.includes('technology') || text.includes('innovation') || text.includes('tech')) {
-      score += 15;
-    }
-    
-    // Boost for safety content
-    if (text.includes('safety') || text.includes('helmet') || text.includes('protection')) {
       score += 12;
     }
     
-    // Boost for mountain biking content
-    if (text.includes('mountain') || text.includes('mtb') || text.includes('trail')) {
+    // Boost for safety content (reduced priority)
+    if (text.includes('safety') || text.includes('helmet') || text.includes('protection')) {
       score += 10;
     }
     
-    // Boost for training/fitness content
-    if (text.includes('training') || text.includes('fitness') || text.includes('workout')) {
+    // Boost for mountain biking content (reduced priority)
+    if (text.includes('mountain') || text.includes('mtb') || text.includes('trail')) {
       score += 8;
     }
     
-    // Major boost for bike-focused sources
+    // Boost for training/fitness content (reduced priority)
+    if (text.includes('training') || text.includes('fitness') || text.includes('workout')) {
+      score += 6;
+    }
+    
+    // MAJOR boost for cycling-focused sources
     const source = article.source?.name || article.source || '';
     const sourceLower = source.toLowerCase();
     if (sourceLower.includes('cycling') || sourceLower.includes('bike') || 
         sourceLower.includes('velo') || sourceLower.includes('bicycle')) {
-      score += 15;
+      score += 20;
     } else if (sourceLower.includes('sport') || sourceLower.includes('athletic')) {
-      score += 8;
+      score += 10;
     }
     
-    // Random variation to simulate real popularity (reduced)
-    score += Math.random() * 5;
+    // Reduced random variation to prioritize content quality
+    score += Math.random() * 3;
     
     return Math.min(100, Math.max(0, Math.round(score)));
   }
 
-  // Rank news by popularity and relevance
+  // Rank news by popularity and relevance - REWEIGHTED for newer articles and major events
   rankNews(news) {
     return news.sort((a, b) => {
-      // First sort by trending status
+      // First priority: Very recent articles (within 6 hours)
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      const now = new Date();
+      const hoursA = (now - dateA) / (1000 * 60 * 60);
+      const hoursB = (now - dateB) / (1000 * 60 * 60);
+      
+      if (hoursA < 6 && hoursB >= 6) return -1;
+      if (hoursA >= 6 && hoursB < 6) return 1;
+      
+      // Second priority: Trending status
       if (a.trending && !b.trending) return -1;
       if (!a.trending && b.trending) return 1;
       
-      // Then by recency (newer articles first)
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
+      // Third priority: Recency (newer articles first)
       if (dateA > dateB) return -1;
       if (dateA < dateB) return 1;
       
-      // Finally by popularity score
+      // Fourth priority: Popularity score
       return b.popularity - a.popularity;
     });
   }
