@@ -1056,6 +1056,184 @@ class RouteService {
       }
     ];
   }
+
+  // Sample random points from isochrone polygon edges and generate routes
+  async generateRoutesFromIsochrone(isochroneData, numPoints = 5) {
+    try {
+      console.log('🔥 Generating routes from isochrone polygon edges...');
+      console.log('Isochrone data:', isochroneData);
+      console.log('Number of points to sample:', numPoints);
+
+      if (!this.heightApiKey) {
+        throw new Error('Height API key not configured');
+      }
+
+      // Extract the largest polygon from isochrone data
+      const largestFeature = isochroneData.features
+        .sort((a, b) => b.properties.value - a.properties.value)[0];
+
+      if (!largestFeature || !largestFeature.geometry) {
+        throw new Error('No isochrone polygon data available');
+      }
+
+      console.log('Largest feature:', largestFeature);
+
+      // Sample random points from polygon edges
+      const sampledPoints = this.samplePointsFromPolygonEdges(largestFeature.geometry, numPoints);
+      console.log('Sampled points:', sampledPoints);
+
+      // Snap points to nearest roads
+      const snappedPoints = await this.snapPointsToRoads(sampledPoints);
+      console.log('Snapped points to roads:', snappedPoints);
+
+      // Generate routes between snapped points
+      const routes = await this.generateRoutesBetweenPoints(snappedPoints);
+      console.log('Generated routes:', routes);
+
+      return {
+        sampledPoints,
+        snappedPoints,
+        routes,
+        isochroneFeature: largestFeature
+      };
+
+    } catch (error) {
+      console.error('❌ Error generating routes from isochrone:', error);
+      throw error;
+    }
+  }
+
+  // Sample random points from polygon edges
+  samplePointsFromPolygonEdges(geometry, numPoints) {
+    console.log('🎯 Sampling points from polygon edges...');
+    
+    if (!geometry || !geometry.coordinates) {
+      throw new Error('Invalid polygon geometry');
+    }
+
+    const coordinates = geometry.coordinates[0]; // Get outer ring
+    const points = [];
+
+    // Sample points along the polygon edges
+    for (let i = 0; i < numPoints; i++) {
+      const randomIndex = Math.floor(Math.random() * coordinates.length);
+      const point = coordinates[randomIndex];
+      
+      points.push({
+        lng: point[0],
+        lat: point[1]
+      });
+    }
+
+    console.log('Sampled points from edges:', points);
+    return points;
+  }
+
+  // Snap points to nearest roads using OpenRouteService
+  async snapPointsToRoads(points) {
+    try {
+      console.log('🛣️ Snapping points to nearest roads...');
+      
+      const locations = points.map(point => [point.lng, point.lat]);
+      
+      const response = await axios({
+        method: 'POST',
+        url: 'https://api.openrouteservice.org/v2/snap/driving-car/json',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+          'Authorization': this.heightApiKey
+        },
+        data: {
+          locations: locations,
+          radius: 350
+        }
+      });
+
+      console.log('✅ Road snapping response:', response.data);
+
+      if (response.data && response.data.snapped) {
+        return response.data.snapped.map(snappedPoint => ({
+          lng: snappedPoint.location[0],
+          lat: snappedPoint.location[1],
+          original: snappedPoint.original,
+          snapped: snappedPoint.snapped
+        }));
+      }
+
+      throw new Error('No snapped points received');
+    } catch (error) {
+      console.error('❌ Error snapping points to roads:', error);
+      throw error;
+    }
+  }
+
+  // Generate routes between snapped points
+  async generateRoutesBetweenPoints(snappedPoints) {
+    try {
+      console.log('🛣️ Generating routes between snapped points...');
+      
+      const routes = [];
+      
+      // Generate routes between consecutive points
+      for (let i = 0; i < snappedPoints.length - 1; i++) {
+        const start = snappedPoints[i];
+        const end = snappedPoints[i + 1];
+        
+        try {
+          const route = await this.generateSingleRoute(
+            start.lng, start.lat,
+            end.lng, end.lat
+          );
+          
+          if (route) {
+            routes.push({
+              start: start,
+              end: end,
+              route: route,
+              distance: route.properties?.summary?.distance || 0,
+              duration: route.properties?.summary?.duration || 0
+            });
+          }
+        } catch (routeError) {
+          console.error(`❌ Error generating route ${i}:`, routeError);
+        }
+      }
+
+      console.log('Generated routes:', routes);
+      return routes;
+    } catch (error) {
+      console.error('❌ Error generating routes between points:', error);
+      throw error;
+    }
+  }
+
+  // Generate a single route between two points
+  async generateSingleRoute(startLng, startLat, endLng, endLat) {
+    try {
+      console.log(`🛣️ Generating route from (${startLng}, ${startLat}) to (${endLng}, ${endLat})`);
+      
+      const response = await axios({
+        method: 'GET',
+        url: `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${this.heightApiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
+        }
+      });
+
+      console.log('✅ Route response:', response.data);
+
+      if (response.data && response.data.features && response.data.features.length > 0) {
+        return response.data.features[0];
+      }
+
+      throw new Error('No route found');
+    } catch (error) {
+      console.error('❌ Error generating single route:', error);
+      throw error;
+    }
+  }
 }
 
 const routeService = new RouteService();
