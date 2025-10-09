@@ -324,22 +324,42 @@ const CreateRideScreen = () => {
         setHeightRoutesLoading(false);
       }
 
-      // NEW: Generate routes from isochrone polygon edges
-      console.log('🔥 NEW FEATURE: Generating routes from isochrone polygon edges...');
+      // NEW: Generate routes from isochrone polygon edges (CHAINED API CALL)
+      console.log('🔥 CHAINED API CALL: Generating routes from isochrone polygon edges...');
       try {
+        setHeightRoutesLoading(true); // Reuse loading state for edge routes
+        
         const edgeRoutes = await RouteService.generateRoutesFromIsochrone(
           isochroneData,
           5 // Number of points to sample from edges
         );
         
-        console.log('✅ Edge routes generated:', edgeRoutes);
+        console.log('✅ CHAINED CALL SUCCESS: Edge routes generated:', edgeRoutes);
+        console.log('📍 Sampled points:', edgeRoutes.sampledPoints);
+        console.log('🛣️ Snapped points:', edgeRoutes.snappedPoints);
+        console.log('🛣️ Generated routes:', edgeRoutes.routes);
+        
         setGeneratedRoute(prev => ({
           ...prev,
           edgeRoutes: edgeRoutes
         }));
+        
+        // Show success message with end locations
+        const endLocations = edgeRoutes.snappedPoints.map((point, index) => 
+          `Point ${index + 1}: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`
+        ).join('\n');
+        
+        console.log('🎯 End locations after snapping:', endLocations);
+        console.log('🎉 Complete route generation successful!');
+        
+        // Show success message
+        alert(`🎉 Complete Route Generation Successful!\n\n✅ Mapbox Isochrone: Generated\n✅ Height Routes: Generated\n✅ Edge Routes: Generated\n\n📍 End locations (snapped to roads):\n${endLocations}\n\nCheck the maps below to see all generated routes!`);
+        
       } catch (edgeError) {
-        console.error('❌ Error generating edge routes:', edgeError);
-        // Don't fail the whole process for edge routes
+        console.error('❌ CHAINED CALL ERROR: Error generating edge routes:', edgeError);
+        setHeightRoutesError('Failed to generate edge routes: ' + edgeError.message);
+      } finally {
+        setHeightRoutesLoading(false);
       }
       
     } catch (error) {
@@ -791,6 +811,80 @@ const CreateRideScreen = () => {
                     startLocation={generatedRoute.startLocation}
                     edgeRoutes={generatedRoute.edgeRoutes}
                   />
+                </Box>
+              )}
+
+              {/* Route Generation Summary */}
+              {generatedRoute && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Route Generation Summary
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Card elevation={2} sx={{ p: 2, textAlign: 'center', backgroundColor: generatedRoute.isochroneData ? '#e8f5e8' : '#f5f5f5' }}>
+                        <Typography variant="h6" color={generatedRoute.isochroneData ? 'success.main' : 'text.secondary'}>
+                          {generatedRoute.isochroneData ? '✅' : '⏳'} Isochrone Map
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Mapbox API
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Card elevation={2} sx={{ p: 2, textAlign: 'center', backgroundColor: heightRoutes && heightRoutes.length > 0 ? '#e8f5e8' : '#f5f5f5' }}>
+                        <Typography variant="h6" color={heightRoutes && heightRoutes.length > 0 ? 'success.main' : 'text.secondary'}>
+                          {heightRoutes && heightRoutes.length > 0 ? '✅' : '⏳'} Height Routes
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          OpenRouteService
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Card elevation={2} sx={{ p: 2, textAlign: 'center', backgroundColor: generatedRoute.edgeRoutes ? '#e8f5e8' : '#f5f5f5' }}>
+                        <Typography variant="h6" color={generatedRoute.edgeRoutes ? 'success.main' : 'text.secondary'}>
+                          {generatedRoute.edgeRoutes ? '✅' : '⏳'} Edge Routes
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Snapped to Roads
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* End Locations Display */}
+              {generatedRoute && generatedRoute.edgeRoutes && generatedRoute.edgeRoutes.snappedPoints && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    End Locations (Snapped to Roads)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    These are the final destination points after sampling from isochrone edges and snapping to the nearest roads.
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {generatedRoute.edgeRoutes.snappedPoints.map((point, index) => (
+                      <Grid item xs={12} sm={6} md={4} key={index}>
+                        <Card elevation={2} sx={{ p: 2 }}>
+                          <Typography variant="subtitle1" gutterBottom>
+                            End Point {index + 1}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Latitude:</strong> {point.lat.toFixed(6)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Longitude:</strong> {point.lng.toFixed(6)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Status:</strong> Snapped to road
+                          </Typography>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
                 </Box>
               )}
 

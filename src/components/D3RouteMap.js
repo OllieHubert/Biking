@@ -72,6 +72,33 @@ const D3RouteMap = ({ routeData, startLocation, width = 800, height = 600 }) => 
       .attr("fill", "#dc3545")
       .text("START");
 
+    // Add snapped end locations markers
+    if (routeData.snappedPoints) {
+      routeData.snappedPoints.forEach((point, index) => {
+        const coords = projection([point.lng, point.lat]);
+        
+        // Add end location marker
+        g.append("circle")
+          .attr("cx", coords[0])
+          .attr("cy", coords[1])
+          .attr("r", 6)
+          .attr("fill", "#28a745")
+          .attr("stroke", "#fff")
+          .attr("stroke-width", 2)
+          .attr("opacity", 0.9);
+
+        // Add end location label
+        g.append("text")
+          .attr("x", coords[0])
+          .attr("y", coords[1] - 12)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "10px")
+          .attr("font-weight", "bold")
+          .attr("fill", "#28a745")
+          .text(`END ${index + 1}`);
+      });
+    }
+
     // Process and display routes
     if (routeData.routes && routeData.routes.length > 0) {
       const colors = ['#FF5722', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#8BC34A'];
