@@ -1133,12 +1133,17 @@ class RouteService {
   async snapPointsToRoads(points) {
     try {
       console.log('🛣️ Snapping points to nearest roads...');
+      console.log('Using API key:', this.heightApiKey ? 'Present' : 'Missing');
       
       const locations = points.map(point => [point.lng, point.lat]);
       
+      // Use CORS proxy for OpenRouteService
+      const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=';
+      const apiUrl = 'https://api.openrouteservice.org/v2/snap/cycling-regular/json';
+      
       const response = await axios({
         method: 'POST',
-        url: 'https://api.openrouteservice.org/v2/snap/driving-car/json',
+        url: proxyUrl + encodeURIComponent(apiUrl),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
@@ -1164,6 +1169,7 @@ class RouteService {
       throw new Error('No snapped points received');
     } catch (error) {
       console.error('❌ Error snapping points to roads:', error);
+      console.error('Error details:', error.response?.data);
       throw error;
     }
   }
@@ -1212,10 +1218,15 @@ class RouteService {
   async generateSingleRoute(startLng, startLat, endLng, endLat) {
     try {
       console.log(`🛣️ Generating route from (${startLng}, ${startLat}) to (${endLng}, ${endLat})`);
+      console.log('Using API key:', this.heightApiKey ? 'Present' : 'Missing');
+      
+      // Use CORS proxy for OpenRouteService
+      const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=';
+      const apiUrl = `https://api.openrouteservice.org/v2/directions/cycling-regular?api_key=${this.heightApiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
       
       const response = await axios({
         method: 'GET',
-        url: `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${this.heightApiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`,
+        url: proxyUrl + encodeURIComponent(apiUrl),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
@@ -1231,6 +1242,7 @@ class RouteService {
       throw new Error('No route found');
     } catch (error) {
       console.error('❌ Error generating single route:', error);
+      console.error('Error details:', error.response?.data);
       throw error;
     }
   }
@@ -1238,7 +1250,7 @@ class RouteService {
 
 const routeService = new RouteService();
 
-// Add global test function for debugging
+// Add global test functions for debugging
 if (typeof window !== 'undefined') {
   window.testMapboxAPI = async () => {
     console.log('🧪 Testing Mapbox API directly...');
@@ -1253,6 +1265,29 @@ if (typeof window !== 'undefined') {
       return result;
     } catch (error) {
       console.error('❌ Test failed:', error);
+      return error;
+    }
+  };
+
+  window.testEdgeRoutesAPI = async () => {
+    console.log('🧪 Testing Edge Routes API directly...');
+    try {
+      const testLocation = {
+        lat: 40.7128,
+        lng: -73.990593,
+        displayName: 'New York City'
+      };
+      
+      // First generate isochrone
+      const isochroneData = await routeService.generateIsochrone(testLocation, 20);
+      console.log('Isochrone data:', isochroneData);
+      
+      // Then generate edge routes
+      const edgeRoutes = await routeService.generateRoutesFromIsochrone(isochroneData, 3);
+      console.log('✅ Edge routes test successful:', edgeRoutes);
+      return edgeRoutes;
+    } catch (error) {
+      console.error('❌ Edge routes test failed:', error);
       return error;
     }
   };
