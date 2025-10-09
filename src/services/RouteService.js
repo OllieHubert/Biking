@@ -284,7 +284,7 @@ class RouteService {
       // Call Height API for elevation data using a more reliable CORS proxy
       const response = await axios({
         method: 'POST',
-        url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://api.openrouteservice.org/v2/export/cycling-road/topojson'),
+        url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.openrouteservice.org/v2/export/cycling-road/topojson'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
@@ -1082,11 +1082,11 @@ class RouteService {
       const sampledPoints = this.samplePointsFromPolygonEdges(largestFeature.geometry, numPoints);
       console.log('Sampled points:', sampledPoints);
 
-      // Snap points to nearest roads
+      // Snap points to nearest roads using real API
       const snappedPoints = await this.snapPointsToRoads(sampledPoints);
       console.log('Snapped points to roads:', snappedPoints);
 
-      // Generate routes between snapped points
+      // Generate routes between snapped points using real API
       const routes = await this.generateRoutesBetweenPoints(snappedPoints);
       console.log('Generated routes:', routes);
 
@@ -1137,36 +1137,54 @@ class RouteService {
       
       const locations = points.map(point => [point.lng, point.lat]);
       
-      // Use CORS proxy for OpenRouteService
-      const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=';
+      // Try multiple CORS proxy approaches
+      const proxies = [
+        'https://api.allorigins.win/raw?url=',
+        'https://cors-anywhere.herokuapp.com/',
+        'https://thingproxy.freeboard.io/fetch/'
+      ];
+      
       const apiUrl = 'https://api.openrouteservice.org/v2/snap/cycling-regular/json';
       
-      const response = await axios({
-        method: 'POST',
-        url: proxyUrl + encodeURIComponent(apiUrl),
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
-          'Authorization': this.heightApiKey
-        },
-        data: {
-          locations: locations,
-          radius: 350
+      for (let i = 0; i < proxies.length; i++) {
+        try {
+          console.log(`🔄 Trying proxy ${i + 1}: ${proxies[i]}`);
+          
+          const response = await axios({
+            method: 'POST',
+            url: proxies[i] + (proxies[i].includes('allorigins') ? encodeURIComponent(apiUrl) : apiUrl),
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+              'Authorization': this.heightApiKey,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            data: {
+              locations: locations,
+              radius: 350
+            },
+            timeout: 10000 // 10 second timeout
+          });
+
+          console.log('✅ Road snapping response:', response.data);
+
+          if (response.data && response.data.snapped) {
+            return response.data.snapped.map(snappedPoint => ({
+              lng: snappedPoint.location[0],
+              lat: snappedPoint.location[1],
+              original: snappedPoint.original,
+              snapped: snappedPoint.snapped
+            }));
+          }
+        } catch (proxyError) {
+          console.log(`❌ Proxy ${i + 1} failed:`, proxyError.message);
+          if (i === proxies.length - 1) {
+            throw proxyError; // Re-throw if all proxies failed
+          }
         }
-      });
-
-      console.log('✅ Road snapping response:', response.data);
-
-      if (response.data && response.data.snapped) {
-        return response.data.snapped.map(snappedPoint => ({
-          lng: snappedPoint.location[0],
-          lat: snappedPoint.location[1],
-          original: snappedPoint.original,
-          snapped: snappedPoint.snapped
-        }));
       }
 
-      throw new Error('No snapped points received');
+      throw new Error('All CORS proxies failed');
     } catch (error) {
       console.error('❌ Error snapping points to roads:', error);
       console.error('Error details:', error.response?.data);
@@ -1220,26 +1238,44 @@ class RouteService {
       console.log(`🛣️ Generating route from (${startLng}, ${startLat}) to (${endLng}, ${endLat})`);
       console.log('Using API key:', this.heightApiKey ? 'Present' : 'Missing');
       
-      // Use CORS proxy for OpenRouteService
-      const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=';
+      // Try multiple CORS proxy approaches
+      const proxies = [
+        'https://api.allorigins.win/raw?url=',
+        'https://cors-anywhere.herokuapp.com/',
+        'https://thingproxy.freeboard.io/fetch/'
+      ];
+      
       const apiUrl = `https://api.openrouteservice.org/v2/directions/cycling-regular?api_key=${this.heightApiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
       
-      const response = await axios({
-        method: 'GET',
-        url: proxyUrl + encodeURIComponent(apiUrl),
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
+      for (let i = 0; i < proxies.length; i++) {
+        try {
+          console.log(`🔄 Trying proxy ${i + 1}: ${proxies[i]}`);
+          
+          const response = await axios({
+            method: 'GET',
+            url: proxies[i] + (proxies[i].includes('allorigins') ? encodeURIComponent(apiUrl) : apiUrl),
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            timeout: 10000 // 10 second timeout
+          });
+
+          console.log('✅ Route response:', response.data);
+
+          if (response.data && response.data.features && response.data.features.length > 0) {
+            return response.data.features[0];
+          }
+        } catch (proxyError) {
+          console.log(`❌ Proxy ${i + 1} failed:`, proxyError.message);
+          if (i === proxies.length - 1) {
+            throw proxyError; // Re-throw if all proxies failed
+          }
         }
-      });
-
-      console.log('✅ Route response:', response.data);
-
-      if (response.data && response.data.features && response.data.features.length > 0) {
-        return response.data.features[0];
       }
 
-      throw new Error('No route found');
+      throw new Error('All CORS proxies failed');
     } catch (error) {
       console.error('❌ Error generating single route:', error);
       console.error('Error details:', error.response?.data);
@@ -1282,7 +1318,7 @@ if (typeof window !== 'undefined') {
       const isochroneData = await routeService.generateIsochrone(testLocation, 20);
       console.log('Isochrone data:', isochroneData);
       
-      // Then generate edge routes
+      // Then generate edge routes (now using mock data)
       const edgeRoutes = await routeService.generateRoutesFromIsochrone(isochroneData, 3);
       console.log('✅ Edge routes test successful:', edgeRoutes);
       return edgeRoutes;
